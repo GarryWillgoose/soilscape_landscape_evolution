@@ -20,6 +20,7 @@ Almost all the codes provided are written in python (I’ve tested them against 
 If you wish to use another python distribution or if you wish to construct your own science python using the public domain python (www. Python.org) or the one already installed on your computer you will need to add the following (free) extension libraries
 
 numpy
+
 matplotlib
 
 SIBERIA
