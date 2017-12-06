@@ -32,7 +32,7 @@ print ' k2: parameter k2'
 print ' k3: parameter k3'
 print ' erode: erosion rate'
 print ' bioturb: bioturbation rate'
-print ' depth: depth of the profile'
+print ' depth: depth of the profile\n'
 
 global zaxis,a_state_store,s_state_store,l_state_store,r_rate_store
 global last_out,last_outk,s_state_ts,s_statemean_ts
@@ -100,12 +100,14 @@ book = {  'fig8.2': 'timeseries',
 if len(sys.argv) >= 2:
 #  setting parameters by book figure number
 
-  if book[sys.argv[1]][:3].lower() != 'fig':
+  if not sys.argv[1].lower() in book:
     print 'The command line argument must be a figure number from the book'
-  NEWDIR = book[sys.argv[1]]
-  print NEWDIR
-  if PARALLEL:
-    NEWDIR = NEWDIR+' parallel'
+    print sys.argv[1].lower(),' not in ',book.keys()
+    quit()
+  else:
+    NEWDIR = book[sys.argv[1].lower()]
+    if PARALLEL:
+      NEWDIR = NEWDIR+' parallel'
 else:
 # setting parameters by explicit command arguments
 
