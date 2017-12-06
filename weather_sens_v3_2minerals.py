@@ -9,140 +9,22 @@ import time
 import os
 import os.path
 import multiprocessing
-import sys
-
-print 'Chemical Weathering Simulator V4: single mineral version'
-print '--------------------------------------------------------'
-print ''
-print ' Input Options are (all of these can be used):\n'
-print ' parallel: run the code in parallel across 75% of the available cores'
-print ' print: output figures in a form suitable for Cambridge University Press'
-print ' clean: minimal annotation for Cambridge University Press'
-print ' depletion: parameter set that results in full depletion of the acid and substrate'
-print ' fixedco2: acid concentration is the same down the profile'
-print ' numerics: a simple run to test the numerics and do CPU timing'
-print ' timeseries: a single run that outputs a time series of output'
-print ' treethrow:  reduces the porosity by 0.01 half way down the profile'
-print ' leachate: a run where the concentration of the leachate is limited to 0.4'
-print ''
-print ' Sensitivity Study options are (only one option can be used):\n'
-print ' v: velocity'
-print ' k1: parameter k1'
-print ' k2: parameter k2'
-print ' k3: parameter k3'
-print ' erode: erosion rate'
-print ' bioturb: bioturbation rate'
-print ' depth: depth of the profile'
 
 global zaxis,a_state_store,s_state_store,l_state_store,r_rate_store
 global last_out,last_outk,s_state_ts,s_statemean_ts
+global s_state_store_2,s_state_ts_2,s_statemean_ts_2,r_rate_store_2
 
 #========================================
-#  GLOBAL PARAMETERS AND CONSTANTS
 #========================================
-
-PARALLEL = True         # uses 75% of the available cores, if this causes problems set to False
-Z_DIM = 50              # number of nodes in the soil profile
-TREETHROW_POROSITY_FACTOR = 10
-SOIL_DEPTH = 2.0
-
-# The multipliers for the sensitivities are gathered here to make it easy to modify them
-# The nominal index is which index of the sensitivities the substrate time series will be calculated for
-SENSITIVITY_DETAIL = [0.8, 0.9, 1.0, 1.1, 1.2]
-NOMINAL_INDEX_DETAIL = 2
-
-SENSITIVITY_NORMAL = [0.5, 0.666, 1.0, 1.5, 2.0]
-NOMINAL_INDEX_NORMAL = 2
-
-SENSITIVITY_DISPERSIVITY = [1.0, 1000, 10000, 100000, 1000000]
-NOMINAL_INDEX_DISPERSIVITY = 2
-
-SENSITIVITY_EETA = [0,0.5,1.0, 2]
-NOMINAL_INDEX_EETA = 2
-
-SENSITIVITY_K2_DEPLETION = [1.0, 1.5, 2, 3, 4]
-NOMINAL_INDEX_K2_DEPLETION = 2
-
-SENSITIVITY_BIOTURBATION = [0.0, 1.0, 5, 10, 50, 100]
-NOMINAL_INDEX_BIOTURBATION = 2
-
+#  CHANGE RUN HERE
+#NEWDIR = 'bioturb 0.005 depletion test-parallel1 print'.lower()
+NEWDIR = 'k1 depletion print 2minerals 1'.lower()
 #========================================
-book = {  'fig8.2': 'timeseries',
-          'fig8.3': 'timeseries depletion',
-          'fig8.4': 'k1',
-          'fig8.5': 'k1 depletion',
-          'fig8.6': 'k2',
-          'fig8.7': 'k3',
-          'fig8.8': 'v',
-          'fig8.9': 'v const mass',
-          'fig8.10': 'erode',
-          'fig8.11': 'dispersivity',
-          'fig8.12': 'k1 leachate',
-          'fig8.13': 'v leachate',
-          'fig8.14': 'v depletion',
-          'fig8.15': 'v depletion detail',
-          'fig8.16': 'erode depletion',
-          'fig8.17': 'erode depletion detail',
-          'fig8.19': 'depth',
-          'fig8.20': 'depth depletion',
-          'fig8.21': 'eeta',
-          'fig8.22': 'erode fixedco2',
-          'fig8.23': 'erode fixedco2 leachate',
-          'fig8.24': 'bioturb depletion',
-          'fig8.25': 'bioturb',
-          'fig11.1': 'treethrow depletion',
-        }
-# for figure 8.26 see the two minerals script
-#========================================
-#  SET RUN HERE
-#========================================
-
-if len(sys.argv) >= 2:
-#  setting parameters by book figure number
-
-  if book[sys.argv[1]][:3].lower() != 'fig':
-    print 'The command line argument must be a figure number from the book'
-  NEWDIR = book[sys.argv[1]]
-  print NEWDIR
-  if PARALLEL:
-    NEWDIR = NEWDIR+' parallel'
-else:
-# setting parameters by explicit command arguments
-
-  #NEWDIR = 'timeseries print'.lower()
-  #NEWDIR = 'timeseries depletion print'.lower()
-  #NEWDIR = 'bioturb 0.005 depletion test-parallel1 print'.lower()
-  #NEWDIR = 'erode parallel print'.lower()
-  #NEWDIR = 'erode depletion parallel print'.lower()
-  #NEWDIR = 'erode depletion detail parallel print'.lower()
-  NEWDIR = 'k1 parallel print'.lower()
-  #NEWDIR = 'k1 depletion parallel print'.lower()
-  #NEWDIR = 'k1 leachate parallel print'.lower()
-  #NEWDIR = 'k2 parallel print'.lower()
-  #NEWDIR = 'k3 parallel print'.lower()
-  #NEWDIR = 'v parallel print'.lower()
-  #NEWDIR = 'v const mass parallel print'.lower()
-  #NEWDIR = 'v leachate parallel print'.lower()
-  #NEWDIR = 'v depletion parallel print'.lower()
-  #NEWDIR = 'v depletion detail parallel print'.lower()
-  #NEWDIR = 'dispersivity parallel print'.lower()
-  #NEWDIR = 'depth parallel print'.lower()
-  #NEWDIR = 'depth depletion parallel print'.lower()
-  #NEWDIR = 'eeta parallel print'.lower()
-  #NEWDIR = 'erode fixedco2 parallel print'.lower()
-  #NEWDIR = 'erode leachate fixedco2 parallel print'.lower()
-  #NEWDIR = 'bioturb parallel print'.lower()
-  #NEWDIR = 'bioturb depletion parallel print'.lower()
-  #NEWDIR = 'treethrow depletion parallel print'.lower()
-
-#========================================
-#   DONE GLOBALS
 #========================================
 
 
 
 def simulation(factor,nominal_index, nominal):
-  global S_BC
   a_state = numpy.zeros((Z_DIM+2),dtype = 'f')
   a_state_new_a = numpy.zeros((Z_DIM+2),dtype = 'f')
   s_state = numpy.zeros((Z_DIM+2),dtype = 'f')
@@ -150,26 +32,31 @@ def simulation(factor,nominal_index, nominal):
   l_state = numpy.zeros((Z_DIM+2),dtype = 'f')
   l_state_new_a = numpy.zeros((Z_DIM+2),dtype = 'f')
   r_rate = numpy.zeros((Z_DIM+2),dtype = 'f')
+  s_state_2 = numpy.zeros((Z_DIM+2),dtype = 'f')
+  s_state_new_a_2 = numpy.zeros((Z_DIM+2),dtype = 'f')
+  r_rate_2 = numpy.zeros((Z_DIM+2),dtype = 'f')
   temp_a = numpy.zeros((Z_DIM+2),dtype = 'f')
   s_state_ts = numpy.zeros((len(z_index),len(TIMES_OUT)), dtype = 'f')
   s_statemean_ts = numpy.zeros((len(TIMES_OUT)), dtype = 'f')
-  vel_state = numpy.zeros((Z_DIM+2),dtype = 'f')
-  diff_state = numpy.zeros((Z_DIM+2),dtype = 'f')
-
+  s_state_ts_2 = numpy.zeros((len(z_index),len(TIMES_OUT)), dtype = 'f')
+  s_statemean_ts_2 = numpy.zeros((len(TIMES_OUT)), dtype = 'f')
   last_out = TIMES_OUT[0]
   last_outk = last_out
-  midz = int(round(Z_DIM*0.5))
 
   if TIME_SERIES_RUN:
     a_state_store = numpy.zeros((len(TIMES_OUT),Z_DIM+2),dtype = 'f')
     s_state_store = numpy.zeros((len(TIMES_OUT),Z_DIM+2),dtype = 'f')
+    s_state_store_2 = numpy.zeros((len(TIMES_OUT),Z_DIM+2),dtype = 'f')
     l_state_store = numpy.zeros((len(TIMES_OUT),Z_DIM+2),dtype = 'f')
     r_rate_store = numpy.zeros((len(TIMES_OUT),Z_DIM+2),dtype = 'f')
+    r_rate_store_2 = numpy.zeros((len(TIMES_OUT),Z_DIM+2),dtype = 'f')
   else:
     a_state_store = numpy.zeros((Z_DIM+2),dtype = 'f')
     s_state_store = numpy.zeros((Z_DIM+2),dtype = 'f')
+    s_state_store_2 = numpy.zeros((Z_DIM+2),dtype = 'f')
     l_state_store = numpy.zeros((Z_DIM+2),dtype = 'f')
     r_rate_store = numpy.zeros((Z_DIM+2),dtype = 'f')
+    r_rate_store_2 = numpy.zeros((Z_DIM+2),dtype = 'f')
 
   V = V_NOMINAL
   DIFFUSIVITY = DIFFUSIVITY_NOMINAL
@@ -186,14 +73,15 @@ def simulation(factor,nominal_index, nominal):
     V = V_NOMINAL*factor
     if 'v const mass' in NEWDIR:
       A_BC1 = A_BC_NOMINAL/factor
-  elif 'dispersivity' in NEWDIR:
+  elif NEWDIR == 'dispersivity':
     DIFFUSIVITY = DIFFUSIVITY_NOMINAL*factor
   elif (NEWDIR == 'k1' or 'k1 leachate' in NEWDIR or 'k1 ' in NEWDIR or
         'k1 fixedco2' in NEWDIR or 'k1 leachate fixedco2' in NEWDIR):
     K1 = K1_NOMINAL*factor
-  elif 'k2' in NEWDIR or 'k2 depletion' in NEWDIR:
+    K1_2 = K1_NOMINAL*factor*4
+  elif NEWDIR == 'k2' or 'k2 depletion' in NEWDIR:
     K2 = K2_NOMINAL*factor
-  elif 'k3' in NEWDIR:
+  elif NEWDIR == 'k3':
     K3 = K3_NOMINAL*factor
   elif (NEWDIR == 'erode' or 'erode ' in NEWDIR or
         'erode fixedco2' in NEWDIR or 'erode leachate fixedco2' in NEWDIR or
@@ -203,7 +91,7 @@ def simulation(factor,nominal_index, nominal):
     LEQUILIB = LEQUILIB_NOMINAL*factor
   elif 'depth' in NEWDIR:
     DZ = DZ_NOMINAL*factor
-  elif 'eeta ' in NEWDIR:
+  elif NEWDIR == 'eta':
     pass
 #    etarun=True
   elif 'erode-velocity depletion' in NEWDIR:
@@ -216,36 +104,22 @@ def simulation(factor,nominal_index, nominal):
     ERODE=0
   elif 'bioturb' in NEWDIR:
     BIOTURB = BIOTURB_NOMINAL*factor
-  elif 'treethrow' in NEWDIR:
-    ERODE = ERODE_NOMINAL*factor
   else:
     print 'ERROR: wrong sensitivity mode selected'
     import sys
     sys.exit()
+  DIFFUSIVITY_1 = DIFFUSIVITY/DZ**2
   if bioturb_active:
     bioturb_1 = BIOTURB/DZ**2
-  if 'fixedco2' in NEWDIR:
-    fixedco2 = True
-  else:
-    fixedco2 = False
-  if 'treethrow' in NEWDIR:
-    vel_state[:midz]= V/DZ
-    vel_state[midz:]= TREETHROW_POROSITY_FACTOR*V/DZ
-    diff_state[:midz] = DIFFUSIVITY/DZ**2
-    diff_state[midz:] = TREETHROW_POROSITY_FACTOR*DIFFUSIVITY/DZ**2
-  else:
-    vel_state[:] = V/DZ
-    diff_state[:] = DIFFUSIVITY/DZ**2
-  if 'timeseries' in NEWDIR and 'depletion' in NEWDIR:
-    S_BC = S_BC*0.5
-#    DIFFUSIVITY_1 = DIFFUSIVITY/DZ**2
-#    V_1 = V/DZ
+  V_1 = V/DZ
   ERODE_1 = ERODE/DZ
 
   a_state[:] = 0
   a_state_new_a[:] = 0
   s_state[:] = 0
   s_state_new_a[:] = 0
+  s_state_2[:] = 0
+  s_state_new_a_2[:] = 0
   l_state[:] = 0
   l_state_new_a[:] = 0
 
@@ -253,82 +127,74 @@ def simulation(factor,nominal_index, nominal):
   a_state_new_a[0] = a_state_new_a[1] = A_BC1
   s_state[:] = S_BC
   s_state_new_a[:] = S_BC
-#  s_state_store[0,:] = s_state[:]
-  s_statemean_ts[0] = S_BC
-  s_state_ts[0] = S_BC
+  s_state_2[:] = S_BC
+  s_state_new_a_2[:] = S_BC
   l_state[:] = L_BC
   l_state_new_a[:] = L_BC
-  if fixedco2:
-    a_state[:] = A_BC1
-    a_state_new_a[:] = A_BC1
-#  s_i_low = 1
-#  s_i_high = Z_DIM+1
 
   for t in range(1,T_DIM+1):
     a_state[end-1] = 2*a_state[end-2]-a_state[end-3]
     s_state_new_a[0] = s_state[1]
+    s_state_new_a_2[0] = s_state_2[1]
 #     the follwing statement causes numerical problems for certain parameters
 #    l_state[end-1] = 2*l_state[end-2]-l_state[end-3]
-    if fixedco2:
-      a_state_new_a[1:Z_DIM+1] = A_BC1
-      temp_a[1:Z_DIM+1] = (K1 * a_state[1:Z_DIM+1] * s_state[1:Z_DIM+1]*
-                            (LEQUILIB-l_state[1:Z_DIM+1])/LEQUILIB)
-    else:
-      temp_a[1:Z_DIM+1] = (K1 * a_state[1:Z_DIM+1] * s_state[1:Z_DIM+1]*
-                            (LEQUILIB-l_state[1:Z_DIM+1])/LEQUILIB)
-      if etarun:
-        for i in range(1,Z_DIM+1):
-          temp_a[i] = temp_a[i]*(0.5*Z_DIM/(i+1))**factor
-  #    a_state_new_a[1:Z_DIM+1] = a_state[1:Z_DIM+1] + DT*(
-  #                -V_1 * (a_state[1:Z_DIM+1]-a_state[0:Z_DIM])
-  #                +DIFFUSIVITY_1 *
-  #                      (a_state[2:Z_DIM+2]-2*a_state[1:Z_DIM+1]+a_state[0:Z_DIM])
-  #                -K2 * temp_a[1:Z_DIM+1])
-      a_state_new_a[1:Z_DIM+1] = a_state[1:Z_DIM+1] + DT*(
-                  -vel_state[0:Z_DIM] * (a_state[1:Z_DIM+1]-a_state[0:Z_DIM])
-                  +diff_state[0:Z_DIM] *
-                        (a_state[2:Z_DIM+2]-2*a_state[1:Z_DIM+1]+a_state[0:Z_DIM])
-                  -K2 * temp_a[1:Z_DIM+1])
+    temp_a[1:Z_DIM+1] = (K1 * a_state[1:Z_DIM+1] * s_state[1:Z_DIM+1]*
+                          (LEQUILIB-l_state[1:Z_DIM+1])/LEQUILIB)
+    temp_a_2[1:Z_DIM+1] = (K1_2 * a_state[1:Z_DIM+1] * s_state_2[1:Z_DIM+1]*
+                          (LEQUILIB-l_state[1:Z_DIM+1])/LEQUILIB)
+    if etarun:
+      for i in range(1,Z_DIM+1):
+        temp_a[i] = temp_a[i]*(0.5*Z_DIM/(i+1))**factor
+        temp_a_2[i] = temp_a_2[i]*(0.5*Z_DIM/(i+1))**factor
+    a_state_new_a[1:Z_DIM+1] = a_state[1:Z_DIM+1] + DT*(
+                -V_1 * (a_state[1:Z_DIM+1]-a_state[0:Z_DIM])
+                +DIFFUSIVITY_1 *
+                      (a_state[2:Z_DIM+2]-2*a_state[1:Z_DIM+1]+a_state[0:Z_DIM])
+                -K2 * (temp_a[1:Z_DIM+1]+temp_a_2[1:Z_DIM+1]))
     if bioturb_active:
       s_state_new_a[1:Z_DIM+1] = s_state[1:Z_DIM+1] + DT*(
                 ERODE_1 * (s_state[2:Z_DIM+2]-s_state[1:Z_DIM+1])
                 +bioturb_1 *
                       (s_state[2:Z_DIM+2]-2*s_state[1:Z_DIM+1]+s_state[0:Z_DIM])
                 -temp_a[1:Z_DIM+1])
+      s_state_new_a_2[1:Z_DIM+1] = s_state_2[1:Z_DIM+1] + DT*(
+                ERODE_1 * (s_state_2[2:Z_DIM+2]-s_state_2[1:Z_DIM+1])
+                +bioturb_1 *
+                      (s_state_2[2:Z_DIM+2]-2*s_state_2[1:Z_DIM+1]+s_state_2[0:Z_DIM])
+                -temp_a_2[1:Z_DIM+1])
     else:
       s_state_new_a[1:Z_DIM+1] = s_state[1:Z_DIM+1] + DT*(
                 ERODE_1 * (s_state[2:Z_DIM+2]-s_state[1:Z_DIM+1])
                 -temp_a[1:Z_DIM+1])
+      s_state_new_a_2[1:Z_DIM+1] = s_state_2[1:Z_DIM+1] + DT*(
+                ERODE_1 * (s_state_2[2:Z_DIM+2]-s_state_2[1:Z_DIM+1])
+                -temp_a_2[1:Z_DIM+1])
 
     s_state_new_a.clip(min=0.000001)
-#    l_state_new_a[1:Z_DIM] = l_state[1:Z_DIM] + DT*(
-#                -V_1 * (l_state[1:Z_DIM]-l_state[0:Z_DIM-1])
-#                +DIFFUSIVITY_1 *
-#                      (l_state[2:Z_DIM+1]-2*l_state[1:Z_DIM]+l_state[0:Z_DIM-1])
-#                +K3 * temp_a[1:Z_DIM])
-#    l_state_new_a[Z_DIM] = l_state[Z_DIM] + DT*(
-#                -V_1 * (l_state[Z_DIM]-l_state[Z_DIM-1])
-#                +DIFFUSIVITY_1 * (-l_state[Z_DIM]+l_state[Z_DIM-1])
-#                +K3 * temp_a[Z_DIM])
+    s_state_new_a_2.clip(min=0.000001)
     l_state_new_a[1:Z_DIM] = l_state[1:Z_DIM] + DT*(
-                -vel_state[1:Z_DIM] * (l_state[1:Z_DIM]-l_state[0:Z_DIM-1])
-                +diff_state[1:Z_DIM] *
+                -V_1 * (l_state[1:Z_DIM]-l_state[0:Z_DIM-1])
+                +DIFFUSIVITY_1 *
                       (l_state[2:Z_DIM+1]-2*l_state[1:Z_DIM]+l_state[0:Z_DIM-1])
-                +K3 * temp_a[1:Z_DIM])
+                +K3 * (temp_a[1:Z_DIM]+temp_a_2[1:Z_DIM]))
     l_state_new_a[Z_DIM] = l_state[Z_DIM] + DT*(
-                -vel_state[Z_DIM] * (l_state[Z_DIM]-l_state[Z_DIM-1])
-                +diff_state[Z_DIM] * (-l_state[Z_DIM]+l_state[Z_DIM-1])
-                +K3 * temp_a[Z_DIM])
+                -V_1 * (l_state[Z_DIM]-l_state[Z_DIM-1])
+                +DIFFUSIVITY_1 * (-l_state[Z_DIM]+l_state[Z_DIM-1])
+                +K3 * (temp_a[Z_DIM]+temp_a_2[Z_DIM]))
     r_rate = temp_a.clip(min=1.001e-3)
+    r_rate_2 = temp_a_2.clip(min=1.001e-3)
     invlgth = 1.0/(len(a_state[1:Z_DIM+1]))
     a_diff = a_state[1:Z_DIM+1]-a_state_new_a[1:Z_DIM+1]
     a_sls = numpy.dot(a_diff,a_diff)*invlgth
     s_diff = s_state[1:Z_DIM+1]-s_state_new_a[1:Z_DIM+1]
     s_sls = numpy.dot(s_diff,s_diff)*invlgth
+    s_diff_2 = s_state_2[1:Z_DIM+1]-s_state_new_a_2[1:Z_DIM+1]
+    s_sls_2 = numpy.dot(s_diff_2,s_diff_2)*invlgth
     l_diff = l_state[1:Z_DIM+1]-l_state_new_a[1:Z_DIM+1]
     l_sls = numpy.dot(l_diff,l_diff)*invlgth
     a_state = a_state_new_a.copy()
     s_state = s_state_new_a.copy()
+    s_state_2 = s_state_new_a_2.copy()
     l_state = l_state_new_a.copy()
 #    l_state[Z_DIM+1] = l_state[Z_DIM]   #  lowerBC in dispersiivity
 #    if a_sls < 1.e-14 and s_sls < 1.e-14 and l_sls < 1.e-14:
@@ -336,12 +202,15 @@ def simulation(factor,nominal_index, nominal):
       if not TIME_SERIES_RUN:
         a_state_store[:] = a_state[:]
         s_state_store[:] = s_state[:]
+        s_state_store_2[:] = s_state_2[:]
         l_state_store[:] = l_state[:]
         r_rate_store[:] = r_rate[:]
+        r_rate_store_2[:] = r_rate_2[:]
       time_done=t
-      print 'time finished:',t,a_sls,s_sls,l_sls
+      print 'time finished:',t,a_sls,s_sls,s_sls_2,l_sls
       break
     if t in TIMES_OUT:
+#      print 'time:',t,a_sls,s_sls,l_sls
       j = TIMES_OUT.index(t)
       if TIME_SERIES_RUN:
         time_done=t
@@ -349,22 +218,29 @@ def simulation(factor,nominal_index, nominal):
         last_outk = j
         a_state_store[j,:] = a_state[:]
         s_state_store[j,:] = s_state[:]
+        s_state_store_2[j,:] = s_state_2[:]
         l_state_store[j,:] = l_state[:]
         r_rate_store[j,:] = r_rate[:]
+        r_rate_store_2[j,:] = r_rate_2[:]
       s_statemean_ts[j] = numpy.sum(s_state[:])/len(s_state[:])
+      s_statemean_ts_2[j] = numpy.sum(s_state_2[:])/len(s_state_2[:])
       last_outk = j
       if nominal:
         time_done=t
         last_out = j
         for i in range(len(z_index)):
           s_state_ts[i,j] = min(s_state[z_index[i]],S_BC)
+          s_state_ts_2[i,j] = min(s_state_2[z_index[i]],S_BC)
   return(a_state_store, s_state_store, l_state_store, r_rate_store,
-          last_out, last_outk, s_state_ts, s_statemean_ts)
+          last_out, last_outk, s_state_ts, s_statemean_ts, s_state_store_2,
+          s_state_ts_2, s_statemean_ts_2, r_rate_store_2)
 
 
 def loop(kkk):
   global zaxis,a_state_store,s_state_store,l_state_store,r_rate_store
   global last_out,last_outk,s_state_ts,s_statemean_ts
+  global s_state_store_2,s_state_ts_2,s_statemean_ts_2,r_rate_store_2
+  
   time_start = time.time()
   print 'SIM=',kkk,'\nstart:',time.ctime()
   nominal = (kkk == NOMINAL_INDEX)
@@ -372,18 +248,24 @@ def loop(kkk):
   if TIME_SERIES_RUN:
     a_state_store = fresult[0]
     s_state_store = fresult[1]
+    s_state_store_2 = fresult[8]
     l_state_store = fresult[2]
     r_rate_store = fresult[3]
+    r_rate_store_2 = fresult[11]
   else:
     a_state_store[kkk,:] = fresult[0]
     s_state_store[kkk,:] = fresult[1]
+    s_state_store_2[kkk,:] = fresult[8]
     l_state_store[kkk,:] = fresult[2]
     r_rate_store[kkk,:] = fresult[3]
+    r_rate_store_2[kkk,:] = fresult[11]
   if nominal:
     last_out = fresult[4]
     s_state_ts = fresult[6]
+    s_state_ts_2 = fresult[9]
   last_outk[kkk]=fresult[5]
   s_statemean_ts[kkk,:] = fresult[7]
+  s_statemean_ts_2[kkk,:] = fresult[10]
   time_end = time.time()
   print 'end: CPU=',time_end-time_start
   return(kkk)
@@ -392,6 +274,8 @@ def loop(kkk):
 def loop1(kkk):
   global zaxis,a_state_store,s_state_store,l_state_store,r_rate_store
   global last_out,last_outk,s_state_ts,s_statemean_ts
+  global s_state_store_2,s_state_ts_2,s_statemean_ts_2,r_rate_store_2
+  
   time_start = time.time()
   print 'SIM=',kkk,'\nstart:',time.ctime()
   nominal = (kkk == NOMINAL_INDEX)
@@ -401,11 +285,6 @@ def loop1(kkk):
   return(fresult)
 
 
-# ============================================
-# ============================================
-#    SETTING RUN PARAMETERS
-# ============================================
-# ============================================
 
 
 if 'timeseries' in NEWDIR:
@@ -415,16 +294,18 @@ elif 'numerics' in NEWDIR:
 else:
   print 'SENSITIVITY RUN: '+NEWDIR
 print 40*'-'
-
-# the code automatically saves of copy of the graphics output to a directory called 'figures'
 VERSIONDIR = 'figures'
 LOCAL = VERSIONDIR+os.sep+NEWDIR+os.sep
 if os.path.exists(LOCAL):
   pass
+#  import shutil
+#  shutil.rmtree(LOCAL, ignore_errors=True)
 else:
   os.mkdir(LOCAL[:-1])
-
-#  run times
+#Z_DIM = 100
+#T_DIM = 100
+Z_DIM = 50
+#T_DIM_S = 2000
 T_DIM_S = 4000
 NUM_TIMES = 200
 if 'numerics' in NEWDIR:
@@ -434,15 +315,10 @@ elif 'lumped_test' in NEWDIR:
   T_DIM_S = 1000
   NUM_TIMES = 100
 
-# ------------------------
-# setting parameter values
-# ------------------------
-
 T_DIM = T_DIM_S*NUM_TIMES
 TIMES_OUT = []
 for i in range(NUM_TIMES+1):
   TIMES_OUT.append(i*T_DIM_S)
-TIMES_OUT[0] = 1
 last_out = TIMES_OUT[0]
 
 if 'timeseries' in NEWDIR or 'numerics' in NEWDIR:
@@ -450,13 +326,14 @@ if 'timeseries' in NEWDIR or 'numerics' in NEWDIR:
 else:
   TIME_SERIES_RUN = False
 
-if 'eeta' in NEWDIR:
+if NEWDIR == 'eta':
   etarun=True
 else:
   etarun=False
 
 V = .1
 V_NOMINAL = V
+#DIFFUSIVITY = 0.01
 DIFFUSIVITY = 0.000001
 DIFFUSIVITY_NOMINAL = DIFFUSIVITY
 if 'depletion' in NEWDIR:
@@ -465,12 +342,12 @@ else:
   K1 = 0.1
 K1_NOMINAL = K1
 K2 = 2.0
+#  Pedometrics
+#K2 = 1.0
 K2_NOMINAL = K2
 K3 = 1.0
 K3_NOMINAL = K3
 ERODE = 0.1
-if 'deposition' in NEWDIR:
-  ERODE = -ERODE
 ERODE_NOMINAL = ERODE
 BIOTURB = 0.005
 BIOTURB_NOMINAL = BIOTURB
@@ -487,45 +364,45 @@ LEQUILIB_NOMINAL = LEQUILIB
 A_BC = 1.0
 A_BC_NOMINAL = A_BC
 if 'depletion' in NEWDIR:
-  S_BC = 0.5
+  S_BC = 0.25
+#  pedometrics
+#  S_BC = 0.5
 else:
   S_BC = 1.0
+#S_BC = 0.25
 L_BC = 0.0
 
-if 'dispersivity' in NEWDIR:
-  DT = 0.0001                     #  timestep
-else:
-  DT = 0.001                     #  timestep
-
-DZ = SOIL_DEPTH/(Z_DIM-1)
-DZ_NOMINAL = DZ
+DT = 0.001                     #  timestep
+DZ = 2.0/(Z_DIM-1)          #  2m deep soil
+DZ_NOMINAL = DZ          #  2m deep soil
 
 if 'detail' in NEWDIR:
-  SENSITIVITY = SENSITIVITY_DETAIL        #  more detail around the nominal value
-  NOMINAL_INDEX = NOMINAL_INDEX_DETAIL
+  SENSITIVITY = [0.8, 0.9, 1.0, 1.1, 1.2]        #  more detail around the nominal value
 else:
-  SENSITIVITY = SENSITIVITY_NORMAL        #  most  runs
-  NOMINAL_INDEX = NOMINAL_INDEX_NORMAL      # which index of the sensitivity runs to use for the time series plots
+  SENSITIVITY = [1.0]        #  most  runs
+#  SENSITIVITY = [0.5, 0.666, 1.0, 1.5, 2.0]        #  most  runs
+NOMINAL_INDEX = 2         # which index of the sensitivity runs to use for the time series plots
 
 if TIME_SERIES_RUN:
   SENSITIVITY = [1.0]       # for time series only want to do it for nominal parameters
   NOMINAL_INDEX = 0         # which index of the sensitivity runs to use for the time series plots
-
 if 'dispersivity' in NEWDIR:
-  SENSITIVITY = SENSITIVITY_DISPERSIVITY        #  dispersivity
-  NOMINAL_INDEX = NOMINAL_INDEX_DISPERSIVITY      # which index of the sensitivity runs to use for the time series plots
-
+  SENSITIVITY = [1.0, 1000, 10000, 100000, 1000000]        #  dispersivity
+  NOMINAL_INDEX = 2         # which index of the sensitivity runs to use for the time series plots
 if 'bioturb' in NEWDIR:
-  SENSITIVITY = SENSITIVITY_BIOTURBATION        #  BIOTURBATION dispersivity
-  NOMINAL_INDEX = NOMINAL_INDEX_BIOTURBATION      # which index of the sensitivity runs to use for the time series plots
-
+#  SENSITIVITY = [50]        #  dispersivity
+#  NOMINAL_INDEX = 0         # which index of the sensitivity runs to use for the time series plots
+  SENSITIVITY = [0.0, 1.0, 5, 10, 50, 100]        #  dispersivity
+  NOMINAL_INDEX = 2         # which index of the sensitivity runs to use for the time series plots
 if 'k2 depletion' in NEWDIR:
-  SENSITIVITY = SENSITIVITY_K2_DEPLETION        #  k2 depletion test
-  NOMINAL_INDEX = NOMINAL_INDEX_K2_DEPLETION         # which index of the sensitivity runs to use for the time series plots
+  SENSITIVITY = [1.0, 1.5, 2, 3, 4]        #  k2 depletion test
+  NOMINAL_INDEX = 2         # which index of the sensitivity runs to use for the time series plots
+if 'eta' == NEWDIR:
+  SENSITIVITY = [0,0.5,1.0, 2]         # for area sensitivity runs
+  NOMINAL_INDEX = 2         # which index of the sensitivity runs to use for the time series plots
 
-if 'eeta' in NEWDIR:
-  SENSITIVITY = SENSITIVITY_EETA         # for area sensitivity runs
-  NOMINAL_INDEX = NOMINAL_INDEX_EETA         # which index of the sensitivity runs to use for the time series plots
+#  SENSITIVITY = [1.8,2.05, 2.06, 2.1, 2.4]        #  k2 runs
+#  NOMINAL_INDEX = 1         # which index of the sensitivity runs to use for the time series plots
 
 LINE_STYLE = ['--', '-', ':', '-.', '-','--', '-', ':', '-.', '-']
 LINE_WIDTH = [2.0, 2.0, 2.0, 2.0, 2.0,2.0, 2.0, 2.0, 2.0, 2.0]
@@ -539,14 +416,20 @@ a_state = numpy.zeros((Z_DIM+2),dtype = 'f')
 a_state_new_a = numpy.zeros((Z_DIM+2),dtype = 'f')
 s_state = numpy.zeros((Z_DIM+2),dtype = 'f')
 s_state_new_a = numpy.zeros((Z_DIM+2),dtype = 'f')
+s_state_2 = numpy.zeros((Z_DIM+2),dtype = 'f')
+s_state_new_a_2 = numpy.zeros((Z_DIM+2),dtype = 'f')
 l_state = numpy.zeros((Z_DIM+2),dtype = 'f')
 l_state_new_a = numpy.zeros((Z_DIM+2),dtype = 'f')
 r_rate = numpy.zeros((Z_DIM+2),dtype = 'f')
+r_rate_2 = numpy.zeros((Z_DIM+2),dtype = 'f')
 temp_a = numpy.zeros((Z_DIM+2),dtype = 'f')
+temp_a_2 = numpy.zeros((Z_DIM+2),dtype = 'f')
 
 z_index = [1,int(0.25*Z_DIM),int(0.5*Z_DIM),int(0.75*Z_DIM), Z_DIM]
 s_state_ts = numpy.zeros((len(z_index),len(TIMES_OUT)), dtype = 'f')
 s_statemean_ts = numpy.zeros((len(SENSITIVITY),len(TIMES_OUT)), dtype = 'f')
+s_state_ts_2 = numpy.zeros((len(z_index),len(TIMES_OUT)), dtype = 'f')
+s_statemean_ts_2 = numpy.zeros((len(SENSITIVITY),len(TIMES_OUT)), dtype = 'f')
 last_outk = numpy.zeros((len(SENSITIVITY)),dtype='i')
 last_outk[:] = last_out
 end = len(l_state)
@@ -554,8 +437,10 @@ end = len(l_state)
 if TIME_SERIES_RUN:
   a_state_store = numpy.zeros((len(TIMES_OUT),Z_DIM+2),dtype = 'f')
   s_state_store = numpy.zeros((len(TIMES_OUT),Z_DIM+2),dtype = 'f')
+  s_state_store_2 = numpy.zeros((len(TIMES_OUT),Z_DIM+2),dtype = 'f')
   l_state_store = numpy.zeros((len(TIMES_OUT),Z_DIM+2),dtype = 'f')
   r_rate_store = numpy.zeros((len(TIMES_OUT),Z_DIM+2),dtype = 'f')
+  r_rate_store_2 = numpy.zeros((len(TIMES_OUT),Z_DIM+2),dtype = 'f')
   NOMINAL_INDEX = 0
   if len(SENSITIVITY) != 1:
     print '#### For a time series run there can only be one sensitivity value',repr(SENSITIVITY)
@@ -565,37 +450,30 @@ if TIME_SERIES_RUN:
 else:
   a_state_store = numpy.zeros((len(SENSITIVITY),Z_DIM+2),dtype = 'f')
   s_state_store = numpy.zeros((len(SENSITIVITY),Z_DIM+2),dtype = 'f')
+  s_state_store_2 = numpy.zeros((len(SENSITIVITY),Z_DIM+2),dtype = 'f')
   l_state_store = numpy.zeros((len(SENSITIVITY),Z_DIM+2),dtype = 'f')
   r_rate_store = numpy.zeros((len(SENSITIVITY),Z_DIM+2),dtype = 'f')
+  r_rate_store_2 = numpy.zeros((len(SENSITIVITY),Z_DIM+2),dtype = 'f')
   zaxis = numpy.zeros((len(SENSITIVITY),Z_DIM+2),dtype = 'f')
 
 a_state_store[0,:] = a_state[:]
 s_state_store[0,:] = s_state[:]
+s_state_store_2[0,:] = s_state_2[:]
 l_state_store[0,:] = l_state[:]
 r_rate_store[0,:] = 0.0001
+r_rate_store_2[0,:] = 0.0001
 for i in range(len(z_index)):
   s_state_ts[i,0] = S_BC
-s_statemean_ts[:,0] = S_BC
+  s_statemean_ts[:,0] = S_BC
+  s_state_ts_2[i,0] = S_BC
+  s_statemean_ts_2[:,0] = S_BC
 
 time_done = T_DIM_S*NUM_TIMES
 
-# ============================================
-# ============================================
-#    CALCULATIONS
-# ============================================
-# ============================================
-
-
 if 'parallel' in NEWDIR:
-#  doing the calculation in parallel mode
-
   for kkk in range(len(SENSITIVITY)):
-    if 'depth' in NEWDIR:
-      DZ11 = DZ*SENSITIVITY[kkk]
-    else:
-      DZ11 = DZ
     for j in range(1,Z_DIM+1):
-      zaxis[kkk,j] = -(j-1)*DZ11
+      zaxis[kkk,j] = -(j-1)*DZ
     zaxis[kkk,0] = 0
     zaxis[kkk,Z_DIM+1] = zaxis[kkk,Z_DIM]
   num_cpus = multiprocessing.cpu_count()
@@ -609,32 +487,58 @@ if 'parallel' in NEWDIR:
     if TIME_SERIES_RUN:
       a_state_store = fresult[kkk][0]
       s_state_store = fresult[kkk][1]
+      s_state_store_2 = fresult[kkk][8]
       l_state_store = fresult[kkk][2]
       r_rate_store = fresult[kkk][3]
+      r_rate_store_2 = fresult[kkk][11]
     else:
       a_state_store[kkk,:] = fresult[kkk][0]
       s_state_store[kkk,:] = fresult[kkk][1]
+      s_state_store_2[kkk,:] = fresult[kkk][8]
       l_state_store[kkk,:] = fresult[kkk][2]
       r_rate_store[kkk,:] = fresult[kkk][3]
+      r_rate_store_2[kkk,:] = fresult[kkk][11]
     if nominal:
       last_out = fresult[kkk][4]
       s_state_ts[:,1:] = fresult[kkk][6][:,1:]
+      s_state_ts_2[:,1:] = fresult[kkk][9][:,1:]
     last_outk[kkk]=fresult[kkk][5]
     s_statemean_ts[kkk,1:] = fresult[kkk][7][1:]
+    s_statemean_ts_2[kkk,1:] = fresult[kkk][10][1:]
 else:
-#  doing the calculation in serial mode
-
   for kkk in range(len(SENSITIVITY)):
-    if 'depth' in NEWDIR:
-      DZ11 = DZ*SENSITIVITY[kkk]
-    else:
-      DZ11 = DZ
     for j in range(1,Z_DIM+1):
-      zaxis[kkk,j] = -(j-1)*DZ11
+      zaxis[kkk,j] = -(j-1)*DZ
     zaxis[kkk,0] = 0
     zaxis[kkk,Z_DIM+1] = zaxis[kkk,Z_DIM]
     loop(kkk)
 
+#  for kkk in range(len(SENSITIVITY)):
+#    for j in range(1,Z_DIM+1):
+#      zaxis[kkk,j] = -(j-1)*DZ
+#    zaxis[kkk,0] = 0
+#    zaxis[kkk,Z_DIM+1] = zaxis[kkk,Z_DIM]
+#    time_start = time.time()
+#    print 'SIM=',kkk,'\nstart:',time.ctime()
+#    nominal = (kkk == NOMINAL_INDEX)
+#    fresult = simulation(SENSITIVITY[kkk],kkk,nominal)
+#    if TIME_SERIES_RUN:
+#      a_state_store = fresult[0]
+#      s_state_store = fresult[1]
+#      l_state_store = fresult[2]
+#      r_rate_store = fresult[3]
+#    else:
+#      a_state_store[kkk,:] = fresult[0]
+#      s_state_store[kkk,:] = fresult[1]
+#      l_state_store[kkk,:] = fresult[2]
+#      r_rate_store[kkk,:] = fresult[3]
+#    if nominal:
+#      last_out = fresult[4]
+#      s_state_ts = fresult[6]
+#    last_outk[kkk]=fresult[5]
+#    s_statemean_ts[kkk,:] = fresult[7]
+#    time_end = time.time()
+#    print 'end: CPU=',time_end-time_start
 try:
   if 'numerics' in NEWDIR:
     ff = open('cpu.txt','a')
@@ -642,12 +546,6 @@ try:
     ff.close()
     print 'A=',a_state
     raise SystemExit
-  
-# ============================================
-# ============================================
-#    GRAPHICS OUTPUT
-# ============================================
-# ============================================
 
   pstring = (NEWDIR+' Sensitivity: V='+str(V_NOMINAL)+' D='+str(DIFFUSIVITY_NOMINAL)+
               ' K1='+str(K1_NOMINAL)+' K2='+str(K2_NOMINAL)+
@@ -684,8 +582,6 @@ try:
                               lw = LINE_WIDTH[i])
   title1 = '(a) A: Acid Conc.'
   contents1.set_title(title1)
-  contents1.set_ylabel('depth (m)')
-  matplotlib.pyplot.locator_params(axis = 'x', nbins=4)
   if not 'clean' in NEWDIR:
     if len(SENSITIVITY) > 1:
       contents1.legend(loc='lower right')
@@ -698,18 +594,24 @@ try:
     for i in range(1,len(TIMES_OUT)):
       stuff2 = contents2.plot(s_state_store[i,:], zaxis[0,:])
   else:
-    for i in range(len(SENSITIVITY)):
-      stuff2 = contents2.plot(s_state_store[i,:-1], zaxis[i,:-1],
-                            label = str(SENSITIVITY[i]),
-                              ls = LINE_STYLE[i],
-                              lw = LINE_WIDTH[i])
+#    for i in range(len(SENSITIVITY)):
+#      stuff2 = contents2.plot(s_state_store[i,:-1], zaxis[i,:-1],
+#                            label = str(SENSITIVITY[i]),
+#                              ls = LINE_STYLE[i],
+#                              lw = LINE_WIDTH[i])
+      stuff2 = contents2.plot(s_state_store[0,:-1], zaxis[0,:-1],
+                            label = '0.5',
+                              ls = LINE_STYLE[0],
+                              lw = LINE_WIDTH[0])
+      stuff2 = contents2.plot(s_state_store_2[0,:-1], zaxis[0,:-1],
+                            label = '2',
+                              ls = LINE_STYLE[1],
+                              lw = LINE_WIDTH[1])
   title2 = '(b) S: Substrate'
   contents2.set_title(title2)
-  contents2.yaxis.set_ticklabels([])
-  matplotlib.pyplot.locator_params(axis = 'x', nbins=4)
 #  if not 'clean' in NEWDIR:
 #    if len(SENSITIVITY) > 1:
-#  #    contents2.legend(loc='lower left')
+  contents2.legend(loc='lower left')
 #      contents2.legend(loc='lower center')
 
   contents5=fig1.add_subplot(233)
@@ -726,8 +628,6 @@ try:
                               lw = LINE_WIDTH[i])
   title5 = '(c) L: Leachate Conc.'
   contents5.set_title(title5)
-  contents5.yaxis.set_ticklabels([])
-  matplotlib.pyplot.locator_params(axis = 'x', nbins=4)
 #  if not 'clean' in NEWDIR:
 #    if len(SENSITIVITY) > 1:
 #  #    contents5.legend(loc='upper right')
@@ -742,14 +642,15 @@ try:
     for i in range(2,len(TIMES_OUT)):
       stuff3 = contents3.plot(r_rate_store[i,:], zaxis[0,:])
   else:
-    for i in range(len(SENSITIVITY)):
-      stuff3 = contents3.plot(r_rate_store[i,:-1], zaxis[i,:-1],
-                            label = str(SENSITIVITY[i]),
-                              ls = LINE_STYLE[i],
-                              lw = LINE_WIDTH[i])
+#    for i in range(len(SENSITIVITY)):
+    stuff3 = contents3.plot(r_rate_store[0,:-1], zaxis[0,:-1],
+                              ls = LINE_STYLE[0],
+                              lw = LINE_WIDTH[0])
+    stuff3 = contents3.plot(r_rate_store_2[0,:-1], zaxis[0,:-1],
+                              ls = LINE_STYLE[1],
+                              lw = LINE_WIDTH[1])
   title3 = '(d) W: Weathering'
   contents3.set_title(title3)
-  contents3.set_ylabel('depth (m)')
 #  if not 'clean' in NEWDIR:
 #    if len(SENSITIVITY) > 1:
 #  #    contents3.legend(loc='upper left')
@@ -764,14 +665,15 @@ try:
     for i in range(2,len(TIMES_OUT)):
       stuff4 = contents4.semilogx(r_rate_store[i,:], zaxis[0,:])
   else:
-    for i in range(len(SENSITIVITY)):
-      stuff4 = contents4.semilogx(r_rate_store[i,:-1], zaxis[i,:-1],
-                                label = str(SENSITIVITY[i]),
-                              ls = LINE_STYLE[i],
-                              lw = LINE_WIDTH[i])
+#    for i in range(len(SENSITIVITY)):
+    stuff4 = contents4.semilogx(r_rate_store[0,:-1], zaxis[0,:-1],
+                              ls = LINE_STYLE[0],
+                              lw = LINE_WIDTH[0])
+    stuff4 = contents4.semilogx(r_rate_store_2[0,:-1], zaxis[0,:-1],
+                              ls = LINE_STYLE[0],
+                              lw = LINE_WIDTH[0])
   title4 = '(e) W: log(Weathering)'
   contents4.set_title(title4)
-  contents4.yaxis.set_ticklabels([])
 #  if not 'clean' in NEWDIR:
 #    if len(SENSITIVITY) > 1:
 #  #    contents4.legend(loc='lower right')
@@ -779,99 +681,7 @@ try:
 #  #    contents4.legend(loc='upper right')
 #      contents4.legend(loc='center right')
 
-  contents6=fig1.add_subplot(236)
-#  contents6.set_ylabel('Substrate')
-#  plot6,axis6 = matplotlib.pyplot.subplots()
-#  print contents6,fig1
-#  major_locator = matplotlib.ticker.MultipleLocator(10000)
-  matplotlib.pyplot.locator_params(axis = 'x', nbins=4)
-  xaxis = []
-  for i in range(s_state_ts.shape[1]):
-    xaxis.append(TIMES_OUT[i])
-  for i in range(len(z_index)):
-    if 'lumped_test' in NEWDIR:
-      temp = s_state_ts[i,:last_out].clip(min=1.001e-2)
-      stuff6 = contents6.semilogy(xaxis[:last_out], temp,
-                            label = 'i='+str(z_index[i]),
-                              ls = LINE_STYLE[i],
-                              lw = LINE_WIDTH[i])
-    else:
-      stuff6 = contents6.plot(xaxis[:last_out], s_state_ts[i,:last_out],
-                            label = 'i='+str(z_index[i]),
-                              ls = LINE_STYLE[i],
-                              lw = LINE_WIDTH[i])
-  import copy
-  if len(SENSITIVITY) > 1:
-    k=0
-    xxaxis = copy.copy(xaxis)
-    if last_out > last_outk[k]:
-      xxaxis[last_outk[k]+1]=xxaxis[last_out]
-      s_statemean_ts[k,last_outk[k]+1] = s_statemean_ts[k,last_outk[k]]
-      last_outk[k]=last_outk[k]+1
-    else:
-      last_outk[k]=last_out
-    if 'lumped_test' in NEWDIR:
-      temp = s_statemean_ts[k,:last_outk[k]].clip(min=1.001e-2)
-      stuff6 = contents6.semilogy(xxaxis[:last_outk[k]], temp,
-                              label = 'ave '+str(SENSITIVITY[k]),
-                                ls = LINE_STYLE[0],
-                                lw = 2*LINE_WIDTH[0], color='k')
-    else:
-      stuff6 = contents6.plot(xxaxis[:last_outk[k]], s_statemean_ts[k,:last_outk[k]],
-                              label = 'ave '+str(SENSITIVITY[k]),
-                                ls = LINE_STYLE[0],
-                                lw = 2*LINE_WIDTH[0], color='k')
-  k=NOMINAL_INDEX
-  xxaxis = copy.copy(xaxis)
-  if last_out > last_outk[k]:
-    xxaxis[last_outk[k]+1]=xxaxis[last_out]
-    s_statemean_ts[k,last_outk[k]+1] = s_statemean_ts[k,last_outk[k]]
-    last_outk[k]=last_outk[k]+1
-  else:
-    last_outk[k]=last_out
-  if 'lumped_test' in NEWDIR:
-    temp = s_statemean_ts[k,:last_outk[k]].clip(min=1.001e-2)
-    stuff6 = contents6.semilogy(xxaxis[:last_outk[k]], temp,
-                            label = 'ave '+str(SENSITIVITY[k]),
-                              ls = LINE_STYLE[1],
-                              lw = 2*LINE_WIDTH[1], color='k')
-  else:
-    stuff6 = contents6.plot(xxaxis[:last_outk[k]], s_statemean_ts[k,:last_outk[k]],
-                            label = 'ave '+str(SENSITIVITY[k]),
-                              ls = LINE_STYLE[1],
-                              lw = 2*LINE_WIDTH[1], color='k')
-
-  if len(SENSITIVITY) > 1:
-    k=len(SENSITIVITY)-1
-    xxaxis = copy.copy(xaxis)
-    if last_out > last_outk[k]:
-      xxaxis[last_outk[k]+1]=xxaxis[last_out]
-      s_statemean_ts[k,last_outk[k]+1] = s_statemean_ts[k,last_outk[k]]
-      last_outk[k]=last_outk[k]+1
-    else:
-      last_outk[k]=last_out
-    if 'lumped_test' in NEWDIR:
-      temp = s_statemean_ts[k,:last_outk[k]].clip(min=1.001e-2)
-      stuff6 = contents6.semilogy(xxaxis[:last_outk[k]], temp,
-                              label = 'ave '+str(SENSITIVITY[k]),
-                                ls = LINE_STYLE[3],
-                                lw = 2*LINE_WIDTH[3], color='k')
-    else:
-      stuff6 = contents6.plot(xxaxis[:last_outk[k]], s_statemean_ts[k,:last_outk[k]],
-                              label = 'ave '+str(SENSITIVITY[k]),
-                                ls = LINE_STYLE[3],
-                                lw = 2*LINE_WIDTH[3], color='k')
-#    contents6.axis.set_major_locator(major_locator)
-    matplotlib.pyplot.locator_params(axis = 'x', nbins=3)
-
-  title6 = '(f) Substrate Time Series'
-  contents6.set_title(title6)
-  if not 'clean' in NEWDIR:
-#    contents6.legend(loc='lower right')
-    contents6.legend(loc='upper right')
-#    contents6.legend(loc='lower left')
-
-  print '\a\a\a\a'
+#  print '\a\a\a\a'
   #matplotlib.pyplot.savefig(LOCAL+'figure.png')
 #  matplotlib.pyplot.savefig(LOCAL+'figure.tiff', dpi=resolution)
   matplotlib.pyplot.savefig(LOCAL+'figure.tiff', dpi=resolution)
