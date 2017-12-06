@@ -1,4 +1,4 @@
-# soilscape_landscape_evolution
+# Chemical Weathering
 
 This directory contains the codes that I used for the chemical weathering simulations in Chapters 8 and 11. There are two codes. Note that versioning was for my benefit to keep track of what codes was used while I was writing the book and extending the codes as I realised more figures/simulations were required. The main difference between V3 (used for the two mierals simulations) and V4 (all other simulations) is that V4 has a more comprehensive set of processes, and the V4 has bene cleaned up a bit more that V3.
 
