@@ -41,6 +41,22 @@ global last_out,last_outk,s_state_ts,s_statemean_ts
 #  GLOBAL PARAMETERS AND CONSTANTS
 #========================================
 
+K1_NORMAL = 0.1
+K1_DEPLETION = 0.5
+K2 = 2.0
+K3 = 1.0
+BIOTURB = 0.005
+ERODE = 0.1
+DIFFUSIVITY = 0.000001
+V = 0.1
+LEQUILIB_NORMAL = 1000
+LEQUILIB_LTD = 0.4
+
+A_INITIALCONDITION = 1.0                      # this is also the upper BC
+S_INITIALCONDITION_NORMAL = 1.0               # this is also the lower BC
+S_INITIALCONDITION_DEPLETION = 0.5            # this is also the lower BC
+L_INITIALCONDITION = 0.0
+
 PARALLEL = True         # uses 75% of the available cores, if this causes problems set to False
 Z_DIM = 50              # number of nodes in the soil profile
 TREETHROW_POROSITY_FACTOR = 10
@@ -182,7 +198,6 @@ def simulation(factor,nominal_index, nominal):
   LEQUILIB = LEQUILIB_NOMINAL
   DZ = DZ_NOMINAL
   A_BC1 = A_BC_NOMINAL
-#  etarun=False
   if (NEWDIR == 'v' or 'v leachate' in NEWDIR or 'v const mass' in NEWDIR or
         'v depletion' in NEWDIR or 'v ' in NEWDIR):
     V = V_NOMINAL*factor
@@ -207,7 +222,6 @@ def simulation(factor,nominal_index, nominal):
     DZ = DZ_NOMINAL*factor
   elif 'eeta ' in NEWDIR:
     pass
-#    etarun=True
   elif 'erode-velocity depletion' in NEWDIR:
     ERODE = ERODE_NOMINAL*((factor-1)*2+1.0)
     V = V_NOMINAL*factor
@@ -240,8 +254,6 @@ def simulation(factor,nominal_index, nominal):
     diff_state[:] = DIFFUSIVITY/DZ**2
   if 'timeseries' in NEWDIR and 'depletion' in NEWDIR:
     S_BC = S_BC*0.5
-#    DIFFUSIVITY_1 = DIFFUSIVITY/DZ**2
-#    V_1 = V/DZ
   ERODE_1 = ERODE/DZ
 
   a_state[:] = 0
@@ -255,7 +267,6 @@ def simulation(factor,nominal_index, nominal):
   a_state_new_a[0] = a_state_new_a[1] = A_BC1
   s_state[:] = S_BC
   s_state_new_a[:] = S_BC
-#  s_state_store[0,:] = s_state[:]
   s_statemean_ts[0] = S_BC
   s_state_ts[0] = S_BC
   l_state[:] = L_BC
@@ -263,14 +274,10 @@ def simulation(factor,nominal_index, nominal):
   if fixedco2:
     a_state[:] = A_BC1
     a_state_new_a[:] = A_BC1
-#  s_i_low = 1
-#  s_i_high = Z_DIM+1
 
   for t in range(1,T_DIM+1):
     a_state[end-1] = 2*a_state[end-2]-a_state[end-3]
     s_state_new_a[0] = s_state[1]
-#     the follwing statement causes numerical problems for certain parameters
-#    l_state[end-1] = 2*l_state[end-2]-l_state[end-3]
     if fixedco2:
       a_state_new_a[1:Z_DIM+1] = A_BC1
       temp_a[1:Z_DIM+1] = (K1 * a_state[1:Z_DIM+1] * s_state[1:Z_DIM+1]*
@@ -281,11 +288,6 @@ def simulation(factor,nominal_index, nominal):
       if etarun:
         for i in range(1,Z_DIM+1):
           temp_a[i] = temp_a[i]*(0.5*Z_DIM/(i+1))**factor
-  #    a_state_new_a[1:Z_DIM+1] = a_state[1:Z_DIM+1] + DT*(
-  #                -V_1 * (a_state[1:Z_DIM+1]-a_state[0:Z_DIM])
-  #                +DIFFUSIVITY_1 *
-  #                      (a_state[2:Z_DIM+2]-2*a_state[1:Z_DIM+1]+a_state[0:Z_DIM])
-  #                -K2 * temp_a[1:Z_DIM+1])
       a_state_new_a[1:Z_DIM+1] = a_state[1:Z_DIM+1] + DT*(
                   -vel_state[0:Z_DIM] * (a_state[1:Z_DIM+1]-a_state[0:Z_DIM])
                   +diff_state[0:Z_DIM] *
@@ -303,15 +305,6 @@ def simulation(factor,nominal_index, nominal):
                 -temp_a[1:Z_DIM+1])
 
     s_state_new_a.clip(min=0.000001)
-#    l_state_new_a[1:Z_DIM] = l_state[1:Z_DIM] + DT*(
-#                -V_1 * (l_state[1:Z_DIM]-l_state[0:Z_DIM-1])
-#                +DIFFUSIVITY_1 *
-#                      (l_state[2:Z_DIM+1]-2*l_state[1:Z_DIM]+l_state[0:Z_DIM-1])
-#                +K3 * temp_a[1:Z_DIM])
-#    l_state_new_a[Z_DIM] = l_state[Z_DIM] + DT*(
-#                -V_1 * (l_state[Z_DIM]-l_state[Z_DIM-1])
-#                +DIFFUSIVITY_1 * (-l_state[Z_DIM]+l_state[Z_DIM-1])
-#                +K3 * temp_a[Z_DIM])
     l_state_new_a[1:Z_DIM] = l_state[1:Z_DIM] + DT*(
                 -vel_state[1:Z_DIM] * (l_state[1:Z_DIM]-l_state[0:Z_DIM-1])
                 +diff_state[1:Z_DIM] *
@@ -332,7 +325,6 @@ def simulation(factor,nominal_index, nominal):
     a_state = a_state_new_a.copy()
     s_state = s_state_new_a.copy()
     l_state = l_state_new_a.copy()
-#    l_state[Z_DIM+1] = l_state[Z_DIM]   #  lowerBC in dispersiivity
 #    if a_sls < 1.e-14 and s_sls < 1.e-14 and l_sls < 1.e-14:
     if (a_sls < 1.e-14 and s_sls < 1.e-14 and l_sls < 1.e-14) or t == T_DIM:
       if not TIME_SERIES_RUN:
@@ -457,42 +449,36 @@ if 'eeta' in NEWDIR:
 else:
   etarun=False
 
-V = .1
 V_NOMINAL = V
-DIFFUSIVITY = 0.000001
 DIFFUSIVITY_NOMINAL = DIFFUSIVITY
 if 'depletion' in NEWDIR:
-  K1 = 0.5
+  K1 = K1_DEPLETION
 else:
-  K1 = 0.1
+  K1 = K1_NORMAL
 K1_NOMINAL = K1
-K2 = 2.0
 K2_NOMINAL = K2
-K3 = 1.0
 K3_NOMINAL = K3
-ERODE = 0.1
 if 'deposition' in NEWDIR:
   ERODE = -ERODE
 ERODE_NOMINAL = ERODE
-BIOTURB = 0.005
 BIOTURB_NOMINAL = BIOTURB
 bioturb_active = False
 if 'bioturb' in NEWDIR:
   bioturb_active = True
 
 
-LEQUILIB = 1000
+LEQUILIB = LEQUILIB_NORMAL
 if 'leachate' in NEWDIR:
-  LEQUILIB = 0.4
+  LEQUILIB = LEQUILIB_LTD
 LEQUILIB_NOMINAL = LEQUILIB
 
-A_BC = 1.0
+A_BC = A_INITIALCONDITION
 A_BC_NOMINAL = A_BC
 if 'depletion' in NEWDIR:
-  S_BC = 0.5
+  S_BC = S_INITIALCONDITION_DEPLETION
 else:
-  S_BC = 1.0
-L_BC = 0.0
+  S_BC = S_INITIALCONDITION_NORMAL
+L_BC = L_INITIALCONDITION
 
 if 'dispersivity' in NEWDIR:
   DT = 0.0001                     #  timestep
