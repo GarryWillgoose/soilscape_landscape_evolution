@@ -14,7 +14,7 @@ python weather_sens_v4.py fig8.4
 
 If you look in the code what this command does is construct the command line arguments and run the simulation that were used to create the figures in the book.
 
-2. The more flexible way to run this code is to set inside the code the command that is used by the simulation. If you look to the commented lines that set a value for NEWDIR you will see a range of command lines that can be easily commented out. Also just above this code is an explanation for some of the NEWDIR arguments. There are also global variables to allow you to change the deopth of the soil, the values of parameters used in the sensitivity studies. Beyond that you'll need to fiddle with the code directly.
+2. The more flexible way to run this code is to set inside the code the command that is used by the simulation. If you look to the commented lines that set a value for NEWDIR you will see a range of command lines that can be easily commented out. Also just above this code is an explanation for some of the NEWDIR arguments. There are also global variables to allow you to change the depth of the soil, the values of parameters used in the sensitivity studies. Beyond that you'll need to fiddle with the code directly.
 
 # Running weather_sens_v3_2minerals
 
