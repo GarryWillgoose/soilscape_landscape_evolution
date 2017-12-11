@@ -1,5 +1,26 @@
-#  this is transport limited weathering simulator
-#  with the added weathering product state
+
+#  This is the transport limited weathering simulator with the added weathering product state
+#
+#  This code is designed to be used in conjunction with the explanatory details
+#  in Willgoose (2018) "Principles of Soilscape and Landscape Evolution", Cambridge University Press
+#
+#    Copyright (C) 2017  Garry Willgoose, The University of Newcastle
+#
+#    This program is free software: you can redistribute it and/or modify
+#    it under the terms of the GNU General Public License as published by
+#    the Free Software Foundation, either version 3 of the License, or
+#    (at your option) any later version.
+#
+#    This program is distributed in the hope that it will be useful,
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#    GNU General Public License for more details.
+#
+#    You should have received a copy of the GNU General Public License
+#    along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+
+
 
 import numpy
 import matplotlib
@@ -11,8 +32,9 @@ import os.path
 import multiprocessing
 import sys
 
-print 'Chemical Weathering Simulator V4: single mineral version'
-print '--------------------------------------------------------'
+print ' Chemical Weathering Simulator V4: single mineral version'
+print ' --------------------------------------------------------'
+print ' Copyright (C) 2017 Garry Willgoose, The University of Newcastle'
 print ''
 print ' Input Options are (all of these can be used):\n'
 print ' parallel: run the code in parallel across 75% of the available cores'
