@@ -6,6 +6,8 @@ This directory contains the codes that I used for the chemical weathering simula
 
 2. weather_sens_v3_2minerals.py: This is the two minerals code used for the simulations in Figure 8.26. 
 
+Please note the GPL licence requirements if you wish to modify or distribute these codes.
+
 # Running weather_sens_v4
 
 1. The simplest way to run this code is to run it at the command line to replicate the figures in the book (e.g. to replicate figure 8.4)
