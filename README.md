@@ -10,15 +10,18 @@ The code for SIBERIA has been highly optimised for performance (at the expense i
 
 COMPILATION
 
-The user should look carefully at the makefile. The order of compilation of the various .f90 is important because the fortran modules in many files are importaed into other files, and the module headers need to be created before depdent modules can be compiled.
+The user should look carefully at the makefile. The order of compilation of the various .f90 is important because the fortran modules in many files are imported into other files, and the module headers need to be created before dependent modules can be compiled.
 
-If you can't figure out the makefiule then a cruide fallback is to repeatedly run the command
+If you can't understand the makefile then a crude fallback is to repeatedly run the command
+
 fortran -c *.f90
 
-until all the files finally compile. After then run the command
+until all the files finally compile. After that run the command
+
 fortran -o SIBERIA *.o
 
 OTHER FILES
 
 siberia-revision-history.txt: has a brief history of revisions to the code since V8.00
+
 siberia.setup: This file should be in the same directory as the executable of siberia as it provides run time options for how Siberia will execute.
