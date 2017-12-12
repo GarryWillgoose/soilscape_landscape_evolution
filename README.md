@@ -11,10 +11,10 @@ As a courtesy it would be good that after you have enhanced the code you send it
 
 Note that the solver in the code for plate-ice.py is identical to plate.py. The difference between plate-ice.py and plate.py is the application of the ice sheet loading on one half of the domain (i.e. plate-ice.py) versus centred around the middle of the domain (i.e. plate.py)
 
-# plate-ice.py
-
-This code was used to generate Figures 12.8 and 12.9 in the book. There are no command line arguments. If you wish to change any of the parameter values you will need to change them in the global parameters at the top of the file. 
-
 # plate.py
 
 This code was used to generate Figures 12.6 and 12.7 in the book.There are no command line arguments. If you wish to change any of the parameter values you will need to change them in the global parameters at the top of the file. 
+
+# plate-ice.py
+
+This code was used to generate Figures 12.8 and 12.9 in the book. There are no command line arguments. If you wish to change any of the parameter values you will need to change them in the global parameters at the top of the file. 
