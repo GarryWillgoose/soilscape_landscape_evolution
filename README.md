@@ -1,4 +1,5 @@
-# soilscape_landscape_evolution
+# Principles of Soilscape and Landscape Evolution
+
 Codes used to generate figures and analysis in Willgoose G R (2018) "Principles of Soilscape and Landscape Evolution", Cambridge University Press
 
 This github repository include the sample landscape evolution codes that were used to create figures in Willgoose G R (2018) “ Principles of Soilscape and Landscape Evolution”, Cambridge University Press. You may download these codes and play with them, modify them and distribute them to others under only two conditions. These two conditions are that 
@@ -14,6 +15,7 @@ The organisation of this site roughly corresponds to the chapter organisation of
 One note about the codes themselves. The codes are not particularly well optimised (either in appearance or performance). My focus was to make the codes as simple to understand as practical, while minimising the amount of time I spent generating the figures in the book. 
 
 PYTHON
+------
 
 Almost all the codes provided are written in python (I’ve tested them against V2.7 and they won’t work on Python V3). Linux and OSX machines come with a python implementation pre-installed but it is missing many useful science library extensions so I suggest you install your own python implementation. There are a number of “science-heavy” python distributions out there. I have used the one from www.enthought.com called Canopy. The Canopy python is available for free for people associated with a university.
 
@@ -23,6 +25,7 @@ numpy
 matplotlib
 
 SIBERIA
+-------
 
 While it is only used lightly in the book this site also has the latest source code for SIBERIA. The source code for SIBERIA is also available at a number of other places (e.g. www.csdms.org) but those versions are typically not the latest version. The intent here is to have the latest version of SIBERIA available here at all times. The terms of use of SIBERIA are different for the other codes on this site. You may download and use SIBERIA. You may not modify it, or redistribute it in any form to other users. If you wish to do some modifications you would like to share with others then send it to me and after quality assuring it I will add it to this site (either as the next version of SIBERIA or a standalone code separate from the main SIBERIA code).
 
